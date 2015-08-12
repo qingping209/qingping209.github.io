@@ -32,3 +32,5 @@ A3：slave处于REDIS\_REPL\_CONNECTING，表明slave已经向master发起了连
 ***Q4：为什么slave在建立好到master的连接后要向master发送一个PING命令并进入REDIS\_REPL\_RECEIVE\_PONG状态？***
 
 A4：slave成功建立到master的连接并不是能够进行数据同步的充分条件。因为，进入数据传输阶段，超时时间比较长，所以在进入下一阶段之前，slave需要确认master能够响应和处理命令。slave在发送收到master回复的PONG后，可能需要向master发送auth命令，进行身份认证，这一步是否要进行取决于master是否有masterauth这个选项。然后就可以进入synchronization了。
+
+-- to be continued --
