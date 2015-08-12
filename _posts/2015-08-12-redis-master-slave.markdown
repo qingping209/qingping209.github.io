@@ -4,45 +4,6 @@ title:  "redis 主从同步过程"
 date:   2015-08-12 12:21:10
 categories: redis, replication
 ---
-lave和master断开连接后 ##
-
-接到某业务Redis服务器告警: master\_link\_status is down, 赶紧上去看看， 发现Slave同步数据异常了:
-
-![](http://i.imgur.com/LhnvRQ6.png)
-
-日志说Slave在做全备的过程中，接收Master的全量数据超时了，控制超时时长的参数是repl-timeout, 看了下是使用的默认值，60s：
-
-![](http://i.imgur.com/eEkTClB.png)
-
-60s就超时了？ 看看rdb文件多大：
-
-![](http://i.imgur.com/fD9Kxqo.png)
-
-这个是滞后1小时10分钟的数据，整个rdb文件也将近10G了。经确认，主从服务器是位于深圳内网， 按照80MB/s的传输速度， 10G的文件也得要~100s了，超时正常。 按照日志的提示，改大点到600s，不超时了，但是Slave还是没复制成功，日志如下：
-
-![](http://i.imgur.com/rdPRFiA.png)
-
-看看Master上面发生了什么：
-
-![](http://i.imgur.com/ZoG1kQR.png)
-
-连接Slave的客户端的buffer大小超限制了。控制这个buffer大小的参数是client-output-buffer-limit，看下设置：
-
-![](http://i.imgur.com/V1Y8hKr.png)
-
-使用的默认值512M, 先调整成1G，没用:
-
-![](http://i.imgur.com/JTjj622.png)
-
-调整成2G，还是有问题：
-
-![](http://i.imgur.com/9kC17gL.png)
-
-调整成4G, 成功了:
-
-![](http://i.imgur.com/fqfzN8z.png)
-
-
 我们来看看几个问题，探索下为何做这些调整以后，同步就成功了。
 
 
