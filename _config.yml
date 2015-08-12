@@ -1,10 +1,9 @@
 # Site settings
 title: Paralleld Notes
 email: parallel#qq.com (Oh yes, I love qq mail)
-description: > I'd like to leave this blank 
-baseurl: "" # the subpath of your site, e.g. /blog/
-url: "http://paralleld.com" # the base hostname & protocol for your site
+description: I'd like to leave this blank 
+baseurl: "" 
+url: "http://paralleld.com" 
 github_username: paralleld
-
 # Build settings
 markdown: kramdown
