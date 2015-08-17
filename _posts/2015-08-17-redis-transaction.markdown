@@ -5,8 +5,6 @@ date:   2015-08-17 14:40:10
 categories: redis
 ---
 
-### redis事务的实现 ###
-
 #### redis中的事务 ####
 看下redis的文档，对于事务的介绍如下：
 
@@ -20,7 +18,7 @@ categories: redis
 
 说到事务，必须扯到ACID, 即原子性，一致性，隔离性，持久性。由于redis单线程的架构，不存在对数据的并发操作，因此天然就具有一致性，隔离性。 至于原子性， 就是让一组命令要么全部执行要么都不执行; 而持久性就是事务完成以后，数据更新不会丢失。持久性比较容易， 我们主要探究这原子性和持久性如何实现。
 
-#### redis的实现 ####
+#### redis事务的实现 ####
 
 ***相关数据结构***
 
@@ -28,13 +26,13 @@ categories: redis
 
     /* Client MULTI/EXEC state */
 	typedef struct multiCmd {
-   		robj **argv;
-   		int argc; 
-   		struct redisCommand *cmd;
+   	robj **argv;
+   	int argc; 
+   	struct redisCommand *cmd;
 	} multiCmd;
 
 	typedef struct multiState {
-   		multiCmd *commands;     /* Array of MULTI commands */    
+   	multiCmd *commands;     /* Array of MULTI commands */    
     	int count;              /* Total number of MULTI commands */
     	int minreplicas;        /* MINREPLICAS for synchronous replication */
     	time_t minreplicas_timeout; /* MINREPLICAS timeout as unixtime. */
