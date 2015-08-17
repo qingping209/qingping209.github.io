@@ -61,3 +61,12 @@ redisDb->watched\_keys是一个dict, dict的键为redis key，值为一个list, 
 流程挺简单，客户端发起multi命令开始一个事务，redis将对应的redisClient标记为REDIS\_MULTI，并将multi之后的命令保存在multiState中，直至收到discard或者exec命令。discard命令会中断事务，将redisClient的multiState内容清空，清除REDIS\_MULTI, REDIS\_DIRTY\_CAS以及REDIS\_DIRTY\_EXEC这三种状态；exec命令则挨个顺序执行所有保存在multiState中的命令，注意exec在执行命令之前会检查redisClient的状态是否被设置为REDIS\_DIRTY\_CAS或者REDIS\_DIRTY\_EXEC，如果是则中断事务，清除所有状态。
 
 上面提到REDIS\_DIRTY\_CAS状态和REDIS\_DIRTY\_EXEC状态。 什么时候redisClient会被置为REDIS\_DIRTY\_CAS状态呢？在redisClient发起一个事务前，如果该redisClient使用watch命令关注过redis key被修改了，可能是自己修改也可能是别的redisClient修改，那么该redisClient会被设置为REDIS\_DIRTY\_CAS状态。 具体而言，watch命令将一个redis key和发起该watch命令的redisClient记录到redisDb->watched\_keys中，将redis key和该key所属的redisDb记录到redisClient->watched\_keys中。执行任意具有写语义的命令时，signalModifiedKey会被调用，signalModifiedKey继而调用touchWatchedKey，touchWatchedKey会从redisDb->watched\_keys中将关注某个redis key的所有redisClient找出来，设置他们的状态为REDIS\_DIRTY_CAS。 redisClient->watched\_keys是个辅助数据结构，用于记录一个redisClient是否关注过某个redis key。那为什么不用dict而用list, dict的效率不是更高么？如果使用dict，那就得确定键和值。由于不同redisDb中可以有相同的redis key，那无论键是什么，值都会是个list。如果键是redis key，则值是redisDb的list, 如果使用到的redisDb不多，不失为一种方式？ 如果键是redisDb，则值是redis key的list。 我个人觉得，如果在redis中使用大量的watch， 或者使用大量的redisDb，都不是明智的做法，因此在通常情况下使用dict和list的性能就差不多了，由于dict的值是个list，那么直接使用list作为redisClient->watched\_keys就更加间接方便。 
+
+那什么时候redisClient会被设置为REDIS\_DIRTY\_EXEC状态？ redis在命令执行前检查命令合法性： 命令是否存在，参数数量是否正确，是否有权限执行， 如果满足有问题，则通过flagTransaction将redisClient设置为REDIS\_DIRTY\_EXEC状态。注意, redis对命令合法性检查比较有限，比如mset的参数合法性，只有在执行的时候才知道，因此
+
+	multi 
+	set a b 
+	mset a b c 
+	exec
+
+multi和exec间的命令都会执行，只是mset a b c失败了。  **所以要注意：REDIS的事务只说了所有的命令要么都执行，要么都不执行，没有对命令成功执行做任何保证。**
