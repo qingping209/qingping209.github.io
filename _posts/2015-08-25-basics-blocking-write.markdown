@@ -30,7 +30,7 @@ categories: networking
 首先第一反应是可能写缓冲区不够了，数据没写完。 改了再运行一次，输出“resource temporarily unavailable”，确实是的。没写完的话，正常情况下应该是要阻塞的，难道没有阻塞么？ 看看fd的属性, 
     
     int flags = fcntl(fd, F_GETFL);
-    fprintf(stdout, "%s", flags & O_NONBLOCK);
+    fprintf(stdout, "%d", flags & O_NONBLOCK);
 
 没错，fd被设置为非阻塞状态。改为阻塞的：
 
@@ -39,6 +39,7 @@ categories: networking
     fcntl(fd, F_SETFL, flags);
 
 上述现象消失。
+
 -- eof --
     
 
