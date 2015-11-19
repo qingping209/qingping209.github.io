@@ -1,0 +1,23 @@
+---
+layout: post
+title: "socket 文件描述符可读，写条件"
+date: 2015-11-18
+category: networking 
+---
+
+###socket在如下情况下可读:###
+* socket接受缓冲区中的数据量比low-water mark大， 此时读会返回一个大于0的整数
+* 读端关闭（如， tcp连接收到了一个FIN），此时，读操作不会阻塞，返回0
+* socket是监听socket，并且完成的连接数量不为0；此时在监听socket上调用accpet不会阻塞
+* socket上有一个未处理的错误， read操作不会阻塞，会返回-1, errno会被设置为对应的错误
+
+###socket在如下情况下可写:###
+* socket写缓冲区的空间比写low-water mark大，此时写会返回一个大于0的整数
+* 写端关闭，应用调用了close(), 此时写，会返回sigpipe
+* nonblocking 模式下connect返回成功，或者connect失败
+* socket上有一个未处理的错误， read操作不会阻塞，会返回-1, errno会被设置为对应的错误
+
+###ref:###
+* UNP 6.5 
+
+--- eof ---
