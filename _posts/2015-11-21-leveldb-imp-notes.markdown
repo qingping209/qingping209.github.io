@@ -94,9 +94,10 @@ L层的合并操作，会丢弃L+1层被覆盖的值（很简单，新值代替�
 
 DeleteObsoleteFiles()在每次合并结束的时候或者故障恢复结束的时候会被调用。执行时，该函数会找到数据库中所有文件的名字，然后删掉除当前正在使用的日志文件外的所有日志文件，删除所有不被任何层级引用，也不是任意合并操作生成的有序表文件。
 
-___Ref: ___
-___ - https://leveldb.googlecode.com/svn/trunk/doc/impl.html ___
-___ -https://en.wikipedia.org/wiki/Log-structured_merge-tree ___
+### Ref: ###
+
+ - https://leveldb.googlecode.com/svn/trunk/doc/impl.html 
+ - https://en.wikipedia.org/wiki/Log-structured\_merge-tree
 
 
 
