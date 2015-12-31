@@ -1,3 +1,10 @@
+---
+layout: post
+title: "redis基于binlog的主从同步"
+date: 2015-12-31 16：20
+categories: redis 
+---
+
 ### 1. 背景 ###
 
 上半年我们使用RocksDB做存储引擎，实施了Redis数据实时落地的项目，实现了在兼容redis协议的前提下，管理超出内存大小的数据集。
