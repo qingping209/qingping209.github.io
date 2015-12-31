@@ -16,7 +16,7 @@ categories: redis
 主从数据同步分一般两步走：同步已有的全量数据，和同步增量数据。同步的全量数据必须是master数据集的point-in-time的快照；增量数据则从快照完成的瞬间算起。如图(一），
 
 ![](https://raw.githubusercontent.com/paralleld/paralleld.github.io/master/images/binlog/1.png)
- ** 图 （一）** Redis原生主从同步机制
+ ***图 （一）*** Redis原生主从同步机制
  
 slave给master发送sync命令请求同步数据，master收到sync命令后，将内存数据镜像(point-in-time)保存为dump.rdb文件，同时将新进来的写请求保存到client-buffer中；master首先将生成的内存镜像文件dump.rdb同步给slave（全量数据同步），完成后，将client-buffer中累积的写请求同步slave（增量数据同步）。这个机制足够简单，但是在实际运营中会遇到一些问题：
 
@@ -34,7 +34,7 @@ slave给master发送sync命令请求同步数据，master收到sync命令后，�
 
 我们对Redis每种具有写语义的命令定义一种binlog，注意是一种，而不是一条。 总共定义了16中binlog， 如图(二）：
 ![](https://raw.githubusercontent.com/paralleld/paralleld.github.io/master/images/binlog/2.png)
- ** 图 （二）** 十六种binlog类型
+ ***图 （二）*** 十六种binlog类型
 
 所有类型binlog都需要满足两个条件， 原因后面展开：
 
@@ -47,19 +47,19 @@ slave给master发送sync命令请求同步数据，master收到sync命令后，�
 前面提到过，主从数据同步分两步，全量数据同步和增量数据同步。master收到一个新的slave的同步请求时，master给RocksDB做个快照，快照中数据分两部分，Redis的数据集和写数据时生成的binlog。master把快照中数据集发给slave即实现全量数据同步；master记录快照中最大的binlog序列号MaxSeq, 把序列号从MaxSeq+1开始的binlog逐条发给slave即可实现增量数据同步。流程很简单，如下图：
 
 ![](https://raw.githubusercontent.com/paralleld/paralleld.github.io/master/images/binlog/3.png)
- ** 图 （三) ** 基于binlog的主从数据同步
+ ***图 （三）***  基于binlog的主从数据同步
 
 #### 3.3 主从连接断开处理 ####
 
 我们已经知道Redis主从同步机制要求slave断开重连master后，同步(psync绝大多数情况下不管用）master的全量数据。这个机制的问题上面已经提过。 如何解决呢？ 很直观，如果slave重连后，能够从断开的位置开始，继续同步master数据，这是最好的。 为了实现这一点，我们以master的视角将slave的同步过程划分为四个状态，图(四）描绘了四个状态之间的转换图：
 
-- REPL_PASTE，master和slave做全量同步
-- REPL_RESUME，slave全量同步时与master断开后重连
--  REPL_FOLLOW，slave和master做增量同步
-- REPL_OUTSYNC，master无法找到slave所需要的binlog
+- REPL\_PASTE，master和slave做全量同步
+- REPL\_RESUME，slave全量同步时与master断开后重连
+-  REPL\_FOLLOW，slave和master做增量同步
+- REPL\_OUTSYNC，master无法找到slave所需要的binlog
 
 ![](https://raw.githubusercontent.com/paralleld/paralleld.github.io/master/images/binlog/4.png)
-* *图（四）** slave同步状态转换图
+***图（四）***  slave同步状态转换图
 
 具体看下每个状态下slave和master断开后重连，如何做续传的：
 
@@ -68,12 +68,12 @@ ___case 1: 正在做全量同步的slave断开与master连接，重连后的续�
 一个空slave实例连上master开始做全量数据同步， slave处于REPL_PASTE状态。 master创建snapshot 1，如下图，
 
 ![](https://raw.githubusercontent.com/paralleld/paralleld.github.io/master/images/binlog/5.png)
-**（五）** 空的slave实例连上master同步全量数据
+***图（五）*** 空的slave实例连上master同步全量数据
 
 此时，master将snapshot 1的数据集同步（逐个key/value对发送)给slave，并且把snapshot 1最大的binlog序列号MaxSeq发给slave。slave记录（持久化到RocksDB中）自己的同步状态为REPL_PASTE，和收到最大的binlog序列号为MaxSeq，并实时更新最后接收的key。假设slave处理完LastKey（此时master的数据集尚未完全同步给salve）即与master断开，稍后重新连上，进入REPL_RESUME状态。此时，master创建snapshot 2，如下图：
 
 ![](https://raw.githubusercontent.com/paralleld/paralleld.github.io/master/images/binlog/6.png)
-** 图 （六） ** 做全量同步的slave断开重连master后做“续传” 
+***图（六）*** 做全量同步的slave断开重连master后做“续传” 
 __（注意：snapshot 1和snapshot 2是RocksDB不同时刻的两个状态，不可能同时存在，这里这样画图只为了方便比较）__
 
 断开时slave同步到snapshot 1的LastKey处，收到的最大binlog序列号为MaxSeq。 重连后，我们要在不清空slave数据集和不全量同步snapshot 2的前提下，把slave的数据更新为snapshot 2，达到“续传”的效果。 先来个拍脑袋的做法：在snapshot 2中找到LastKey， 从紧跟在它后面的LastKey’开始的key/value对起继续同步。 这样做不对，有两个原因：
@@ -98,31 +98,8 @@ ___case 3: 处于REPL_FOLLOW状态的slave和master断开后重连___
 slave重连将后进入REPL_FOLLOW状态。 处于这个状态的slave在做增量同步，master不需要为其生成快照。 由于slave重连时把最后同步的binlog序号MaxSeq发给了master，master只需要找到序号从MaxSeq+1开始的binlog，将它们同步给slave即可，如图：
 
 ![](https://raw.githubusercontent.com/paralleld/paralleld.github.io/master/images/binlog/7.png)
-** 图 （七）** 做增量同步的slave断开重连master后做“续传”
+***图 （七）*** 做增量同步的slave断开重连master后做“续传”
 
 ### 4. 小结 ###
 
 我们用落地为Redis增加了一种新的基于binlog的主从数据同步方式，实现了主从断开后slave和master间数据“续传”，避免了每次slave都要全量同步master数据，给master带来过大压力。 另外，由于有了binlog，我们可以做历史数据恢复，这里就不具体展开了。
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
