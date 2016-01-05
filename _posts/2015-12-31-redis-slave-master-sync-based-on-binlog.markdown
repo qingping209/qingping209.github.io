@@ -102,4 +102,4 @@ slave重连将后进入REPL_FOLLOW状态。 处于这个状态的slave在做增�
 
 ### 4. 小结 ###
 
-我们用落地为Redis增加了一种新的基于binlog的主从数据同步方式，实现了主从断开后slave和master间数据“续传”，避免了每次slave都要全量同步master数据，给master带来过大压力。 另外，由于有了binlog，我们可以做历史数据恢复，这里就不具体展开了。
+我们为Redis增加了一种新的基于binlog的主从数据同步方式，实现了主从断开后slave和master间数据“续传”，避免了每次slave都要全量同步master数据，给master带来过大压力。 另外，由于有了binlog，我们可以做历史数据恢复，这里就不具体展开了。
