@@ -2,7 +2,8 @@
 layout: post
 title: "leveldb实现笔记阅读"
 date: 2015-11-21
-category: storage
+categories: 存储
+tags: leveldb
 ---
 
 读了一遍leveldb作者写的实现笔记，记(fan)录(yi）要（yi)点(bian)， 该文回答了以下问题：

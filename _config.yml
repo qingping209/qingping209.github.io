@@ -1,9 +1,17 @@
-# Site settings
-title: Paralleld Notes
-email: parallel#qq.com (Oh yes, I love qq mail)
-description: I'd like to leave this blank 
-baseurl: "" 
-url: "http://paralleld.com" 
-github_username: paralleld
-# Build settings
-markdown: kramdown
+#markdown: rdiscount
+permalink: /:title/
+url: http://paralleld.github.io
+#highlighter: pygments
+highlighter: rouge
+gems: [jekyll-paginate]
+paginate: 100
+paginate_path: "page:num"
+name: paralleld
+description: paralleld | 多撸少BB
+author: paralleld
+email: paralleld@qq.com 
+duoshuo: dwj
+weibo: 1859819624
+hub: paralleld
+safe: false
+about: "老码农"

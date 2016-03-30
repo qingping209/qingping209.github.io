@@ -2,7 +2,8 @@
 layout: post
 title: "redis 3.0 集群 之 拓扑结构和数据访问"
 date: 2015-12-06
-category: redis
+categories: redis
+tags: 集群
 ---
 
 ###1 redis 3.0集群功能特点: ###

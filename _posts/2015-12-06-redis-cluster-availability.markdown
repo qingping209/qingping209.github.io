@@ -3,6 +3,7 @@ layout: post
 title: "redis 3.0 集群 之 高可用"
 date: 2015-12-06
 categories: redis
+tags: 集群
 ---
 
 ### 3. 高可用 ###

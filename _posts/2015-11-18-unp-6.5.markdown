@@ -2,7 +2,8 @@
 layout: post
 title: "socket 文件描述符可读，写条件"
 date: 2015-11-18
-category: networking 
+categories: 网络
+tags: 网络
 ---
 
 ###socket在如下情况下可读:###

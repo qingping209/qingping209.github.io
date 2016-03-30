@@ -2,7 +2,8 @@
 layout: post
 title: "redis的output-buffer-limit配置"
 date: 2015-11-02
-category: redis
+categories: redis
+tags: 源码
 ---
 
 ### **配置介绍** ###

@@ -3,6 +3,7 @@ layout: post
 title:  "redis 事务的实现"
 date:   2015-08-17 14:40:10
 categories: redis
+tags: 源码
 ---
 
 #### redis中的事务 ####

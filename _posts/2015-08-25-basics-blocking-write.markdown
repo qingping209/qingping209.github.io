@@ -2,7 +2,8 @@
 layout: post
 title: "一个非阻塞写的坑"
 date: 2015-08-25 22:23
-categories: networking 
+categories: redis 
+tags: 源码
 ---
 先看一份代码:
  

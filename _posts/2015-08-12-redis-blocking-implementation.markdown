@@ -3,6 +3,7 @@ layout: post
 title:  "redis list blocking操作实现"
 date:   2015-08-12 12:21:10
 categories: redis
+tags: 主从同步 源码
 ---
 
 ###相关数据结构###

@@ -1,4 +1,9 @@
-# wangju的笔记
+###[paralleld](http://github.thinkingbar.com)
 
-这里记录着wangju工作和学习中遇到的技术问题，和一些总结思考。 使用的是[Jekyll-Pithy模板](http://wenva.github.io)，
-向作者致谢。
+---
+
+本博客运行于 [Jekyll](http://jekyllrb.com) @ [GitHub](https://github.com/paralleld/paralleld.github.io)，拿来自 [niushuai](https://github.com/niushuai) 的博客。
+
+paralleld
+
+2014-03-20

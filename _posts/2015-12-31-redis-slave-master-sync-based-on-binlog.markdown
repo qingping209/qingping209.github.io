@@ -3,6 +3,7 @@ layout: post
 title: "redis基于binlog的主从同步"
 date: 2015-12-31 16：20
 categories: redis 
+tags: 主从同步
 ---
 
 ### 1. 背景 ###
