@@ -1,4 +1,4 @@
-###[paralleld](http://github.thinkingbar.com)
+###[paralleld](http://paralleld.github.io)
 
 ---
 
