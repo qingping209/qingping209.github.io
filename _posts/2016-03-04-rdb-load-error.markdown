@@ -3,7 +3,7 @@ layout: post
 title: "redis 加载rdb文件导致master断开slave的问题"
 date: 2016-03-04
 categories: redis
-tags: tcp
+tags: 坑 
 ---
 
 #### __问题描述__ ####
