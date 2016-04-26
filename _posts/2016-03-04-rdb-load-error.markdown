@@ -101,7 +101,7 @@ tags: 坑
     ......
     }
 
-可以看到slave在把rdb加载到内存以后，才会去处理master发过来的增量写请求。 前面说到，当master把rdb文件发给slave以后，马上发送增量写请求，其中一部分数据把slave端的读缓冲区占满了，另外一部分没法被slave接受，这个时候master端无法收到ack，就不停重发，直到重试tcp_retires2次，就关闭连接，返回etimedout错误。
+可以看到slave在把rdb加载到内存以后，才会去处理master发过来的增量写请求。 前面说到，当master把rdb文件发给slave以后，马上发送增量写请求，其中一部分数据把slave端的读缓冲区占满了，另外一部分没法被slave接受，这个时候master端无法收到ack，就不停重发，直到重试tcp_retries2次，就关闭连接，返回etimedout错误。
 
 #### __证据__ ####
 
@@ -121,7 +121,7 @@ master向slave不断重发1448个字节的数据15次：
 
 #### __解决方案__ ####
 
-问题的根源清楚了，就是slave读缓冲区满了， 导致master发出的一部分数据没法被接受，master收不到ack，master在重试一段时间后，认为连接断掉了，就将socket关闭。而我们需要master一直重试直到把这部分数据发送成功。最简单和直接的办法是修改tcp_retires2参数，增加重试的次数。改到20， rdb加载完成后，master还在重试， 此时slave可以从缓冲区读出来。
+问题的根源清楚了，就是slave读缓冲区满了， 导致master发出的一部分数据没法被接受，master收不到ack，master在重试一段时间后，认为连接断掉了，就将socket关闭。而我们需要master一直重试直到把这部分数据发送成功。最简单和直接的办法是修改tcp_retries2参数，增加重试的次数。改到20， rdb加载完成后，master还在重试， 此时slave可以从缓冲区读出来。
 
 #### __思考__ ####
 
