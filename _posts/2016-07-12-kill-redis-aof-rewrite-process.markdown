@@ -1,3 +1,11 @@
+---
+layout: post
+title: "杀死redis后台io进程"
+date: 2016-07-12
+categories: redis, aof
+tags: 坑 
+---
+
 Redis的aof rewrite机制在如下两种情况下会启用：
 1. 用户给Redis发BGREWRITEAOF命令
 2. aof文件的大小增长超过一定比例，且aof文件实际大小超过一定值
