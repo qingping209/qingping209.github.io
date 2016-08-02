@@ -2,7 +2,7 @@
 layout: post
 title: "杀死redis后台io进程"
 date: 2016-07-12
-categories: redis, aof
+categories: redis
 tags: 坑 
 ---
 
