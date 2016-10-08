@@ -2,7 +2,7 @@
 layout: post
 title: "tcp-delay-accept"
 date: 2016-07-12
-categories: networking
+categories: tcp/ip
 tags: 坑 
 ---
 
