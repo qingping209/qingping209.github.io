@@ -45,9 +45,9 @@ Redis的aof rewrite机制在如下两种情况下会启用：
 
 所以， 一旦发现线上aof rewrite 的进程影响了线上服务， 且kill不掉的时候，可以先通过config set调整
 
-```
-auto-aof-rewrite-percentage 100
-auto-aof-rewrite-min-size 64mb
-```
+<pre>
+  auto-aof-rewrite-percentage 100
+  auto-aof-rewrite-min-size 64mb
+</pre>
 
 这两个配置，将auto-aof-rewrite-percentage调大，或者auto-aof-rewrite-min-size调大， 然后kill掉bg-aof-rewrite进程，必要的时候，可以通过config set appendonly no停掉aof rewrite。
