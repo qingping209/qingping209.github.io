@@ -1,0 +1,88 @@
+---
+layout: post
+title:  "GFS 阅读笔记"
+date:   2018-01-04 22:21:10
+categories: GFS 
+tags: notes
+---
+
+### 总体设计 ###
+GFS的角色分为Master和Chunkserver.  每个文件被分为固定大小的chunk,  存放在chunk server上。 所有文件系统的元信息，例如，访问控制信息，命名空间，文件名到chunk的映射，当前chunk的位置。Master还负责全局的系统行为，例如chunk的租约管理，孤儿chunk的垃圾回收，chunkserver之间的chunk迁移。 Master周期性地向chunkserver发送心跳包，指引chunkserver的行为，获取chunkserver的状态。
+
+
+__GFS集群单独Master设计___，好处是大大的简化了系统的设计； 但是必须想办法减少读写数据时，client与master之间的交互。
+
+__chunksize的选择: 64M__, 三个优点: 1. chunksize大，则chunk数量少， client可以缓存TB级别数据集的chunk的位置；2. chunk越大，则client在该chunk上可能做的操作越多，利用到chunkserver的长连接，可以减少网络开销； 3. 较大的chunksize减少了存储于Master上的数据量。__一个缺点__： 大的chunksize可能造成热点数据，一个文件可能就一个chunk，对该文件的所有操作都命中到一个chunk上。
+
+__三类元数据:__ 1. 文件和chunk的命名空间 2. 文件到chunk的映射 3. 每个chunk位于的副本的位置。 元数据存储于内存，文件和chunk命令空间，以及文件到chunk的映射，使用oplog同步到master的热备上。chunk的位置信息并不存放在磁盘上，Master定期轮询chunkserver，获取每个chunk的位置信息。__为什么没有持久化地存储chunk的位置信息__，实时同步处理起来麻烦；master上的信息不能准确的反应chunk的位置信息，也不需要反应；最终一个chunkserver上面有哪些chunk，应该以chunkserver上面的信息为准。
+
+ 文件和chunk的命名空间，以及文件到chunk的映射， 有oplog记录其更新，oplog被复制到master的热备上，且oplog的复制是同步的。为了加速master的recover过程， oplog超过一定大小，就做一个checkpoint。
+
+### 一致性 ###
+
+GFS主要处理两个方面的一致性问题,
+-  单机上对同一个文件并发写的一致性
+- chunkserver不同副本上数据的一致性
+- 应用应该如何利用GFS的一致性特性
+
+#### 一致性模型 ####
+
+GFS里面中的文件在并发修改的情况下，可能存在三种状态，consistent, undefined, inconsistent, undefined。 在consitent状态下，所有client可以看到一样的数据，不管是从哪个replica读取；在defined状态下，客户端可以看到其写到文件的完整数据。非并发状态下的成功更新，文件的状态是defined和consistent的； 并发状态下的成功更新，文件状态是consistent但是undefined的， 修改后的文件来自各个客户端不完整的数据组成。失败的更新会导致修改后的文件inconsistent, 当然也是undefined的。
+
+GFS中写分两种，write和append。 write是指GFS把数据写到应用指定的offset；regular append是指应用把数据写到client指定的文件结尾，这个其实也是一种写； record append是指GFS把数据写到GFS指定的offset。regular append模式无法对抗并发写。record append模式下，GFS可以保证写至少成功一次，且在并发写的场景下，文件状态是defined的。但是由于需要padding（chunksize大小固定的限制）, 或者多次重试才成功，几个成功的record append之间会分布存在着一些不一致的数据，或者重复的record。 这些数据没用，需要应用侧丢弃掉。不过这些数据量与正确的数据量比起来，小得多。
+
+#### 副本一致性 ####
+
+GFS如何在多个replica之间保持数据的一致性呢？ 主要从两个方面着手，一是保证数据写入到多个replica时是一致的： 在所有的replica上以相同的顺序应用修改； 另一方面，保证client从不同的replica上面读取的数据是一致的：使用chunk版本号来检测陈旧的chunk(这些chunk可能在其chunkserver宕机的时候，错失了一些更新)。 包含了陈旧数据的chunkserver不会被更新，也不会被读取， 因为master在处理client的chunk location请求时，根本就不会返回这些chunkserver( 那master是如何知道哪些chunk数据不一致了呢，master和chunkserver的定期心跳包可以检测到)。
+
+由于client会缓存chunkserver的位置，因此还是有机会读取到陈旧的数据，这个几率大小取决于client缓存的过期时间长短。另外即使，读取到了陈旧的数据文件，也不是大问题，因为都是用的append操作，读取到的数据并不是错误的数据，而是部分数据。  chunkserver的失效会导致数据corruption发生。 
+
+#### 对应用侧的要求 ####
+
+所有使用GFS的应用都只使用append，不使用write， 使用checkpoint应append失败，使用self-validating和self-indendifying的数据块，也就是应用需要能识别数据块(使用magic number)，能检测重复的数据块(使用uuid)，能够校验数据的正确性(checksum)。
+
+### 系统交互 ### 
+
+#### 使用lease确定mutation的全局顺序 ####
+
+GFS使用lease来保证mutation在所有的replica上作用的顺序是一致的。 master向一个replica的某个chunk颁发lease,获得lease的replica成为primary， primary为所有客户端提交过来的mutations赋予一串序列号，所有的replica按照这序列号来应用mutations.  因此, 颁发lease的顺序和每个lease内，mutation的序列号，定义了全局的mutation应用顺序。 具体流程如下：
+1. client向master获取目标chunk所在的primary和replica，如果没有primary,  master向一个replica颁发lease, 这个replica就成为primary
+2. master回复客户端，primary和replica的地址，client缓存这些信息供以后的mutation使用； client只在primary不可达，或者primary回复不在握有lease的时候，才需要再次访问master
+3. client把mutation推送到所有的replica上。client可以以任意顺序推送数据，只要能打满网络；所有的chunkserver将这些数据存在一个lru cache中(why lru)，直到这些数据被使用或者过期
+4. 一旦所有的replica向client确认收到数据，client向primary发送一个写请求，这个写请求可以识别早先推送到所有replica上的数据。primary给所有的mutations(可能从不同的client获取)加上序列号，并且按照序列号指定的顺序在本地磁盘应用这些mutations.
+5. primary把写请求forward到所有的replica,  所有的replica按照同样的顺序应用mutations
+6. 所有的replica向primary回复，操作已经完成
+7. primary回复客户端。 任意replica上遇到的错误，都透过primary通知client。一旦有错误发生，写操作就只在primary和部分replica上成功。该客户端写请求被认为失败，被修改的文件区域成为不一致状态。客户端会识别失败错误码，重试失败的mutation几次，如果一致不成功，就重发整个写请求
+
+#### 解耦控制流和数据流 ####
+
+解耦控制流和数据流，可以是充分利用网络带宽。我们知道，写操作的流程是， 写在primary上面更新， 再在其它的replica上更新。 传统的做法是，把数据发送到primary上去，更新了，然后把数据分别发送到其他的replica上去， 再在所有的replica上应用； GFS的做法是，首先把数据推送到所有的replica上面去： 将所有replica的拓扑结构设计为一个线性结构，而不是树桩结构，并且使用pipeline的模式（前面一个chunkserver只要收到数据，立马转发到下一个chunkserver) ：
+
+					Primary ====> Replica A ====> Replica B ====> Replica C
+
+这种方式，在没有网络拥堵的理想情况下，将B字节的数据传输到R个replica上的时间是: B/T + RL， 其中T是网络吞吐量，L是两个机器之间的传输时延。
+
+#### 原子性的Record Append操作 ####
+
+Record Append相当于Linux环境下没有竞争条件时的并发O_APPEND操作。 Record Append的执行流程和普通的写操作区别不大，只是primary需要检查record append操作是否会造成文件的最后一个chunk超过64M的大小，如果是这样， 将当前chunk做padding，并且通知其它replica做同样的操作， 然后告诉客户端在下一个chunk上面重试。只有record append应用在某个chunk的所有副本的同样位置，record append才算成功。只要record append在任何一个replica上面失败，客户端需要重试整个操作。GFS并不保证所有replica在字节级别相同，只保证数据原子性的写至少一次。
+
+思考: 有没有可能，在primary上面成功了， 在某个replica R上失败了，然后primary挂了，且replica R被选为新的primary?
+
+#### 快照机制 ####
+
+GFS使用标准的引用计数和copy-on-write机制实现快照。 客户端向master发起一个快照操作请求，master计算出需要做快照的数据所在的chunkserver， 并且撤销这个chunkserver所拥有的lease，这样，接下来在向这些chunkserver发写操作之前，client需要与master交互，master需要颁发新的chunkserver。在这些lease被撤销或者过期以后，master将快照操作记录到磁盘，然后在内存中复制一份需要做快照的文件或者目录树的元数据，则快照的元数据和原来的元数据，指向同一个chunk.  当客户端在做快照后，首次修改快照中的一个chunk C，master发现chunk C的引用计数大于1，就延迟对client的回复： 选择一个新chunk handle C'， 通知所有的chunk C所在的chunkserver为chunk C创建一个副本chunk C',  然后给C’所在的一个chunkserver颁发lease，并回复client， client就可以正常进行写操作。
+
+### master上的操作 ###
+
+#### 命名空间管理和锁 ####
+
+GFS不像传统的文件系统在每个目录中都维护一个数据结构，来列出目录中的所有文件， 也不支持文件别名，如符号链接。 GFS使用全路径到元数据的映射表来表达命名空间，使用前缀压缩的方式来提高内存效率。 所有的maste操作之前，必须获取一组锁，如果/d1/d2/.../dn/leaf是操作路径，那么需要获取/d1, /d1/d2, ..., /d1/d2/.../dn的读锁，获取e /d1/d2/.../dn/leaf的读锁，或者写锁，取决于具体的操作。 如， 这个锁机制可以在/home/user快照到/save/user时，阻止/home/user/foo的创建，如下：快照机制需要获取/save  /home的读锁，以及/home/user 以及/save/user的写锁，创建/home/user/foo需要获取/home,  /home/user的读锁，和/home/user/foo的写锁，而获取/home/user的读锁与做快照时获取/home/user的写锁是冲突的，所以/home/user/foo无法创建成功。
+
+由于命名空间中有很多节点，可能存在的锁也很多。这些锁都是延迟创建，并且在不使用的时候，就删除掉。
+
+### 其它问题 ###
+
+replica分配，负载均衡，迁移和垃圾回收。磁盘空间使用，机架部署， 来回迁移保证chunkserver的磁盘使用率是均衡的。 master上无记载的chunk都需要被回收。chunk的版本号在给chunk颁发lease的时候时候增加。 那么有个问题，如果一个chunk的lease被颁发了，所有的replica上的chunk version number都自增了， client开始写以后，其中一个replica不可达了： 如果该replica一直不可达，当次写操作是失败了；如果replica又可达了，client可以通过重试完成该操作。 问题来了， 在写操作失败的情况下， 这个chunk在所有的replica上的版本号是一致的，但是数据不同了。这个其实没问题，因为GFS并不要求不同replica上面的数据字节级别的相同，如果这个写操作失败了， client会重试，重试时，如果这个replica恢复了，那一切正常进行；如果失败了，client缓存信息过期会去找master要新的replica信息，master与这个replica有心跳检测，可以探测到； 如果没过期，client可以自行检查一下这个replica是不是恢复了，如果没有则向master请求新的replica信息， master会探测到这个replica失效，不会返回这个replica到client.
+
+
+
