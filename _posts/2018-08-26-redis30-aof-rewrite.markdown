@@ -19,7 +19,7 @@ redis2.8.17 vs redis4.0.11
 
 启动命令：  ./src/redis-server  --appendonly yes
 AOF policy:  everysec
-压测命令： ./src/redis-benchmark -r 1000000000 -n 20000000 lpush mylist\_\_rand\_int\_\_ rand\_int\_\_
+压测命令： ./src/redis-benchmark -r 1000000000 -n 20000000 lpush mylist__rand_int__ rand_int__
 
 测试结果：
 
