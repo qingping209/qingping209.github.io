@@ -1,0 +1,32 @@
+---
+layout: post
+title: "一种mysql xa做法"
+date: 2018-08-26
+categories: mysql
+tags: 分布式
+---
+
+### 流程：
+1. proxy上面来了一个事务， begin txn ... commit;  收到begin txn以后， proxy把sql转发到后端remote db
+2. 收到commit时， proxy判断， 已经执行的语句是否涉及多个remote db， 如果不涉及，直接把commit转发到remote db提交了， 流程结束
+3. 如果proxy判断执行语句涉及多个remote db,  开启两阶段提交
+4. proxy给所有后端并行发送prepare命令， 等待后端后端回复；
+5. 如果后端都回复了prepare指令，proxy记录commit log， 然后给所有后端发送commit指令， 所有remote db回复了commit指令以后，事务成功提交， 给客户端返回结果； proxy有可能记录commit log失败【异常1】，需要处理； 有可能只有部分remote db收到了commit指令【异常2】需要处理
+6. 如果后端在一定时间内没能回复proxy的prepare指令【异常3】，则给所有的后端发送rollback命令； 有可能部分remote db收到rollback指令， 【异常4】，需要处理
+
+### 异常处理：
+【异常1】： proxy在写好commit log之前挂了， 这个时候，remote db的事务处于prepared状态，但是不知道是否提交， rollback吧；
+
+【异常2】： proxy写好了commit log， 发送了部分commit到remote db以后，挂了,  remote db上面部分事务是commit的， 部分是prepare的， resolver探测到有长期处于prepare状态的事务， 根据全局txn-id去反查，commit log记录的地方，检查这个事务是不是已经提交了，如果提交了， 则提交该prepared状态的事务，否则， rollback
+
+【异常3】:    proxy在一定时间内没有收到所有remote db对prepare指令的响应，则发送rollback指令， 这个时候通常是remote db卡住了，或者死掉了；
+
+【异常4】:    proxy在发送rollback时挂了，那么有部分remote db处于prepare状态， resolver探测到长期处于prepare状态的事务， 将这些事务回滚
+
+### 注意事项：
+1.  proxy应该先写commit log， 再发commit指令； 因为写commit log比发送多条commit指令快而且可靠， commit log一旦写好了， 即使proxy挂了，resolver也可以把事务提交
+2. 需要一个resolver的角色，检测一下是否有长期处于prepare状态的事务，根据commit log判断其状态，做commit或者rollback处理
+3. proxy收到prepare指令回复的超时时间，事务处于prepare状态的超时时间，需要仔细配置。 resolver不得把一个长事务中处于prepare状态的事务误杀了；
+4. 死锁检测问题。弄一个全局DAG， 定期检测全局DAG, 是否成环。
+5. 使用si隔离级别
+6. 使用强同步，binlog推送到slave， slave 的i/o线程回应之后，再客户端再返回成功， 在此期间，线程可以做其他的工作，而不被卡死。 此方案中， latency没有减小，throughput提高了。
