@@ -7,7 +7,6 @@ gems: [jekyll-paginate]
 paginate: 100
 paginate_path: "page:num"
 name: qingping209
-description: qingping209
 author: qingping209
 email: paralleld@qq.com
 hub: qingping209

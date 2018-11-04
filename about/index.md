@@ -4,9 +4,7 @@ layout: page
 comments: no
 ---
 
-###个人说明
-
-* 腾讯码农
+ " Writing is the nature's way to know how sloppy your thinking is. "
 
 ###欢迎交流
 
