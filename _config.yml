@@ -6,7 +6,7 @@ highlighter: rouge
 gems: [jekyll-paginate]
 paginate: 100
 paginate_path: "page:num"
-name: qingping209
+name: cnredis
 author: qingping209
 email: paralleld@qq.com
 hub: qingping209
