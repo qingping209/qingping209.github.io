@@ -1,8 +1,8 @@
 ---
 layout: post
-title:  "GFS 阅读笔记"
+title:  "GFS"
 date:   2018-01-04 22:21:10
-categories: GFS 
+categories: GFS
 tags: notes
 ---
 
@@ -10,7 +10,7 @@ tags: notes
 GFS的角色分为Master和Chunkserver.  每个文件被分为固定大小的chunk,  存放在chunk server上。 所有文件系统的元信息，例如，访问控制信息，命名空间，文件名到chunk的映射，当前chunk的位置。Master还负责全局的系统行为，例如chunk的租约管理，孤儿chunk的垃圾回收，chunkserver之间的chunk迁移。 Master周期性地向chunkserver发送心跳包，指引chunkserver的行为，获取chunkserver的状态。
 
 
-__GFS集群单独Master设计___，好处是大大的简化了系统的设计； 但是必须想办法减少读写数据时，client与master之间的交互。
+__GFS集群单独Master设计__，好处是大大的简化了系统的设计； 但是必须想办法减少读写数据时，client与master之间的交互。
 
 __chunksize的选择: 64M__, 三个优点: 1. chunksize大，则chunk数量少， client可以缓存TB级别数据集的chunk的位置；2. chunk越大，则client在该chunk上可能做的操作越多，利用到chunkserver的长连接，可以减少网络开销； 3. 较大的chunksize减少了存储于Master上的数据量。__一个缺点__： 大的chunksize可能造成热点数据，一个文件可能就一个chunk，对该文件的所有操作都命中到一个chunk上。
 
@@ -35,13 +35,13 @@ GFS中写分两种，write和append。 write是指GFS把数据写到应用指定
 
 GFS如何在多个replica之间保持数据的一致性呢？ 主要从两个方面着手，一是保证数据写入到多个replica时是一致的： 在所有的replica上以相同的顺序应用修改； 另一方面，保证client从不同的replica上面读取的数据是一致的：使用chunk版本号来检测陈旧的chunk(这些chunk可能在其chunkserver宕机的时候，错失了一些更新)。 包含了陈旧数据的chunkserver不会被更新，也不会被读取， 因为master在处理client的chunk location请求时，根本就不会返回这些chunkserver( 那master是如何知道哪些chunk数据不一致了呢，master和chunkserver的定期心跳包可以检测到)。
 
-由于client会缓存chunkserver的位置，因此还是有机会读取到陈旧的数据，这个几率大小取决于client缓存的过期时间长短。另外即使，读取到了陈旧的数据文件，也不是大问题，因为都是用的append操作，读取到的数据并不是错误的数据，而是部分数据。  chunkserver的失效会导致数据corruption发生。 
+由于client会缓存chunkserver的位置，因此还是有机会读取到陈旧的数据，这个几率大小取决于client缓存的过期时间长短。另外即使，读取到了陈旧的数据文件，也不是大问题，因为都是用的append操作，读取到的数据并不是错误的数据，而是部分数据。  chunkserver的失效会导致数据corruption发生。
 
 #### 对应用侧的要求 ####
 
 所有使用GFS的应用都只使用append，不使用write， 使用checkpoint应append失败，使用self-validating和self-indendifying的数据块，也就是应用需要能识别数据块(使用magic number)，能检测重复的数据块(使用uuid)，能够校验数据的正确性(checksum)。
 
-### 系统交互 ### 
+### 系统交互 ###
 
 #### 使用lease确定mutation的全局顺序 ####
 
