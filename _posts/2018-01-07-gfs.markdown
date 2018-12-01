@@ -27,7 +27,7 @@ GFS主要处理两个方面的一致性问题,
 
 #### 一致性模型 ####
 
-GFS里面中的文件在并发修改的情况下，可能存在三种状态，consistent, undefined, inconsistent, undefined。 在consitent状态下，所有client可以看到一样的数据，不管是从哪个replica读取；在defined状态下，客户端可以看到其写到文件的完整数据。非并发状态下的成功更新，文件的状态是defined和consistent的； 并发状态下的成功更新，文件状态是consistent但是undefined的， 修改后的文件来自各个客户端不完整的数据组成。失败的更新会导致修改后的文件inconsistent, 当然也是undefined的。
+GFS里面中的文件在并发修改的情况下，可能存在三种状态，consistent, defined, inconsistent, undefined。 在consitent状态下，所有client可以看到一样的数据，不管是从哪个replica读取；在defined状态下，客户端可以看到其写到文件的完整数据。非并发状态下的成功更新，文件的状态是defined和consistent的； 并发状态下的成功更新，文件状态是consistent但是undefined的， 修改后的文件来自各个客户端不完整的数据组成。失败的更新会导致修改后的文件inconsistent, 当然也是undefined的。
 
 GFS中写分两种，write和append。 write是指GFS把数据写到应用指定的offset；regular append是指应用把数据写到client指定的文件结尾，这个其实也是一种写； record append是指GFS把数据写到GFS指定的offset。regular append模式无法对抗并发写。record append模式下，GFS可以保证写至少成功一次，且在并发写的场景下，文件状态是defined的。但是由于需要padding（chunksize大小固定的限制）, 或者多次重试才成功，几个成功的record append之间会分布存在着一些不一致的数据，或者重复的record。 这些数据没用，需要应用侧丢弃掉。不过这些数据量与正确的数据量比起来，小得多。
 
