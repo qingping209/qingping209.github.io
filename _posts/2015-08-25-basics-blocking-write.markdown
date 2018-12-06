@@ -2,11 +2,11 @@
 layout: post
 title: "一个非阻塞写的坑"
 date: 2015-08-25 22:23
-categories: 网络编程
-tags: 源码
+categories: tcp/ip
+tags: 坑
 ---
 先看一份代码:
- 
+
     // 通过iter遍历数据库，逐条将数据发送到远程服务器上
     Iterator *iter = beginIterator();
     while (isValid(iter)) {
@@ -29,7 +29,7 @@ tags: 源码
     }
 
 首先第一反应是可能写缓冲区不够了，数据没写完。 改了再运行一次，输出“resource temporarily unavailable”，确实是的。没写完的话，正常情况下应该是要阻塞的，难道没有阻塞么？ 看看fd的属性, 
-    
+​    
     int flags = fcntl(fd, F_GETFL);
     fprintf(stdout, "%d", flags & O_NONBLOCK);
 
@@ -42,7 +42,7 @@ tags: 源码
 上述现象消失。
 
 -- eof --
-    
+​    
 
 
 

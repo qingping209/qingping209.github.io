@@ -3,7 +3,7 @@ layout: post
 title: "tcp-delay-accept"
 date: 2016-07-12
 categories: tcp/ip
-tags: 坑 
+tags: 坑
 ---
 
 google上面搜索TCP_DEFER_ACCEPT会出现这几篇文章：

@@ -3,7 +3,7 @@ layout: post
 title:  "redis list blocking操作实现"
 date:   2015-08-12 12:21:10
 categories: redis
-tags: 主从同步 源码
+tags: 原理
 ---
 
 ###相关数据结构###
@@ -56,7 +56,7 @@ Redis的list支持blocking操作，即如果目标list没有元素，客户端�
 - clientsCronHandleTimeout作为clientsCron的一部分每秒执行一次，检查是否有处于REDIS\_BLOCKED状态的redisClient已经过了等待时间，如果有，则调用unblockClientWaitingData清除阻塞状态：将该redisClient的blockingState结构清空，将该redisClient从其当前操作的redisDb的blocking_keys的删除。
 
 - redis每执行完一条命令以后会处理被阻塞的redisClient：
-       
+  ​     
         if (listLength(server.ready_keys))
             handleClientsBlockedOnLists();
 
@@ -69,7 +69,7 @@ Redis的list支持blocking操作，即如果目标list没有元素，客户端�
     void dbAdd(redisDb *db, robj *key, robj *val) {
         sds copy = sdsdup(key->ptr);
         int retval = dictAdd(db->dict, copy, val);
-
+    
         redisAssertWithInfo(NULL,key,retval == REDIS_OK);
         if (val->type == REDIS_LIST) signalListAsReady(db, key);
     }

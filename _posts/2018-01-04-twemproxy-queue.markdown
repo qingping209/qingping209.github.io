@@ -3,7 +3,7 @@ layout: post
 title:  "twemproxy队列机制"
 date:   2018-01-04 22:21:10
 categories: redis
-tags: 源码
+tags: 原理
 ---
 
 twemproxy作为redis的代理程序，为客户端提供通过M个twemproxy访问N个后端redis节点(M << N)的能力。 

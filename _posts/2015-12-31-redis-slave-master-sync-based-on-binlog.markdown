@@ -3,7 +3,7 @@ layout: post
 title: "redis基于binlog的主从同步"
 date: 2015-12-31 16：20
 categories: redis 
-tags: 主从同步
+tags: 原理
 ---
 
 ### 1. 背景 ###
@@ -18,7 +18,7 @@ tags: 主从同步
 
 ![](https://raw.githubusercontent.com/paralleld/paralleld.github.io/master/images/binlog/1.png)
  ***图 （一）*** Redis原生主从同步机制
- 
+
 slave给master发送sync命令请求同步数据，master收到sync命令后，将内存数据镜像(point-in-time)保存为dump.rdb文件，同时将新进来的写请求保存到client-buffer中；master首先将生成的内存镜像文件dump.rdb同步给slave（全量数据同步），完成后，将client-buffer中累积的写请求同步slave（增量数据同步）。这个机制足够简单，但是在实际运营中会遇到一些问题：
 
 - slave一旦同master断开，重连后如果不能做psync（实际运营中psync基本没有成功过），就要同步master的全量数据

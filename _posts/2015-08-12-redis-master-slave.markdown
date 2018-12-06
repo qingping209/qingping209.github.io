@@ -3,7 +3,7 @@ layout: post
 title:  "redis 主从同步过程"
 date:   2015-08-12 12:21:10
 categories: redis
-tags: 源码 主从同步
+tags: 原理
 ---
 看下redis主从同步的过程中比较细节的几个问题。
 

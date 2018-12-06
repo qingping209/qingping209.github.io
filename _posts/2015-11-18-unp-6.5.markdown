@@ -3,7 +3,7 @@ layout: post
 title: "socket 文件描述符可读，写条件"
 date: 2015-11-18
 categories: tcp/ip
-tags: 网络
+tags: facts
 ---
 
 ###socket在如下情况下可读:###

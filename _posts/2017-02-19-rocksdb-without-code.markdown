@@ -2,8 +2,8 @@
 layout: post
 title: "白话rocksdb"
 date: 2017-02-19
-categories: 存储 
-tags: rocksdb 
+categories: rocksdb
+tags: 原理
 ---
 
 

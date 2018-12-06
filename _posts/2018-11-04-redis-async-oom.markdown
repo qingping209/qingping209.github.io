@@ -3,6 +3,7 @@ layout: post
 title: "一个异步访问redis的内存问题"
 date: 2018-11-04
 categories: redis
+tags: 坑
 ---
 
 遇到一个redis实例突然内存飙高的案例， 具体症状如下：

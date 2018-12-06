@@ -2,9 +2,8 @@
 layout: post
 title: "redis pipeline"
 date: 2017-02-19
-categories: 存储
-tags: redis 
----        
+categories: redis
+tags: 原理
 
 redis有种客户端交互模式，叫做pipeline模式， 可以大幅度提高系统的吞吐量， 官方文档在这里,  https://redis.io/topics/pipelining，
 

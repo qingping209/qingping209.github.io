@@ -3,7 +3,7 @@ layout: post
 title:  "redis 事务的实现"
 date:   2015-08-17 14:40:10
 categories: redis
-tags: 源码
+tags: 原理
 ---
 
 #### redis中的事务 ####
@@ -26,18 +26,18 @@ tags: 源码
 事务的实现位于src/multi.c中。 与multi和exec相关的数据结构有：
 
     /* Client MULTI/EXEC state */
-	typedef struct multiCmd {
+    typedef struct multiCmd {
    	robj **argv;
    	int argc; 
    	struct redisCommand *cmd;
-	} multiCmd;
+​	} multiCmd;
 
 	typedef struct multiState {
    	multiCmd *commands;     /* Array of MULTI commands */    
-    	int count;              /* Total number of MULTI commands */
-    	int minreplicas;        /* MINREPLICAS for synchronous replication */
-    	time_t minreplicas_timeout; /* MINREPLICAS timeout as unixtime. */
-	} multiState;
+​    	int count;              /* Total number of MULTI commands */
+​    	int minreplicas;        /* MINREPLICAS for synchronous replication */
+​    	time_t minreplicas_timeout; /* MINREPLICAS timeout as unixtime. */
+​	} multiState;
 
 multiState记录着一个事务所需要执行的所有命令。 
 

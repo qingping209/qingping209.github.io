@@ -3,7 +3,7 @@ layout: post
 title: "redis的output-buffer-limit配置"
 date: 2015-11-02
 categories: redis
-tags: 源码
+tags:原理
 ---
 
 ### **配置介绍** ###
@@ -100,7 +100,7 @@ redis server通过addReply把数据发送给客户端:
             sendReplyToClient, c) == AE_ERR) return REDIS_ERR;
         return REDIS_OK;
     }
-    
+
 该段代码的注释说得很清楚， 如果客户端是个fakeClient（用于加载aof文件），或者是个master,
 或者是个处于REDIS\_REPL\_ONLINE状态的slave但为其且安装写回掉函数失败时，则不应该将数据
 写入客户端output buffer。 我们知道，在master保存和发送rdb文件期间，slave的状态是:
@@ -120,7 +120,7 @@ redis server通过addReply把数据发送给客户端:
           aeDeleteFileEvent(server.el,slave->fd,AE_WRITABLE);
           putSlaveOnline(slave);
       }
-
+    
     // 将slave的状态改为REDIS_REPL_ONLINE, repl_put_online_on_ack置为0，
     // 并且安装写回调函数
     void putSlaveOnline(redisClient *slave) {
