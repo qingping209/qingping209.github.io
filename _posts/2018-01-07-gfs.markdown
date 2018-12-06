@@ -2,8 +2,8 @@
 layout: post
 title:  "gfs"
 date:   2018-01-04 22:21:10
-categories: GFS
-tags: notes
+categories: 分布式
+tags: storage
 ---
 
 ### 总体设计 ###

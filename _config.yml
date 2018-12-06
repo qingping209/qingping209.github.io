@@ -1,7 +1,7 @@
 #markdown: rdiscount
 permalink: /:title/
 url: http://qingping209.github.io
-#highlighter: pygments
+highlighter: pygments
 highlighter: rouge
 gems: [jekyll-paginate]
 paginate: 100
