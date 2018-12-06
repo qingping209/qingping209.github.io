@@ -2,8 +2,8 @@
 layout: post
 title: "dynamo"
 date: 2018-11-25
-categories: notes
-tags: 分布式
+categories: 分布式
+tags: 架构
 ---
 
 ### 1. 数据分布: 一致性哈希 + 虚拟节点

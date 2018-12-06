@@ -3,7 +3,7 @@ layout: post
 title: "haystack"
 date: 2018-11-28
 categories: 分布式
-tags: storage
+tags: 架构
 ---
 
 ### 一，总体架构
