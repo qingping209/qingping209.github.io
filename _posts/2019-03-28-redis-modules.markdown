@@ -8,9 +8,9 @@ tags: redis
 
 
 
-### Redis Module简介
+### Redis Modules简介
 
-redis module是redis 4.0推出的一项重大功能， redis 模块的出现，使得redis的生态进一步的繁荣了。 redis module的核心理念是，以模块的方式，为redis server开发新的功能，新功能的代码和redis server核心功能的代码完全隔离，互不影响， 换句话说，redis本身的代码量并不会随着功能的增多而膨胀。如何做到？ redis server通过暴露一系列的核心API， 为模块开发者提供redis的核心基础能力， 模块开发者通过核心API，实现特定功能，将模块融入redis server，从而为redis server提供扩展。
+redis module是redis 4.0推出的一项重大功能， redis 模块的出现，使得redis的生态进一步的繁荣了。 redis module的核心理念是，以模块的方式，为redis server开发新的功能，新功能的代码和redis server核心功能的代码完全隔离，互不影响， 换句话说，**redis server的代码量并不会随着功能的增多而膨胀, 核心模块的开发和质量可控，同时又能满足社区对功能的多样化的需求**。如何做到这点？ redis server通过暴露一系列的核心API， 为模块开发者提供redis server的核心基础能力, 这些基础能力包括，获取key, 写入key, 复制，持久化，集群，lua, pubsub, blocking等等。开发者通过核心API，实现特定功能，通过加载模块的方式， 赋予redis server新的能力，满足自身的业务需求。
 
 理解一个模块如何正常工作，我们需要回答如下几个问题：
 
@@ -93,5 +93,5 @@ A4-A6: 都有相应的核心API提供响应的能力
 
 #### Q7: 为什么要单独封装一套API?
 
-A7: 在执行module中的命令时，需要保存module的context
+A7:  在执行module中的命令时，需要保存module的context
 
