@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Redis模块初探"
+title: "redis模块初探"
 date: 2019-03-28
 categories: redis
 tags: redis
