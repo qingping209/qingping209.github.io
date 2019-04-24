@@ -3,7 +3,7 @@ layout: post
 title: "redis的output-buffer-limit配置"
 date: 2015-11-02
 categories: redis
-tags:原理
+tags: 原理
 ---
 
 ### **配置介绍** ###
@@ -27,15 +27,15 @@ soft limit一段时间，server端会立即断开该客户端，并且释放该�
 的内存到达30M，或者连续超过10M的时间维持10s，那么客户端的连接会被立刻断开。
 
 默认情况下，对普通客户端的output buffer size不设置限制，因为server只有在其请求
-数据的时候才会发送；只有异步客户端请求数据比接收快的时候，才会产生out buffer 
+数据的时候才会发送；只有异步客户端请求数据比接收快的时候，才会产生out buffer
 size膨胀的问题。对于用作pubsub和slave的客户端，由于server会主动把数据推送给
 它们，需要设置output buffer size的限制。
 
 可以通过将hard limit/soft limit都设置为0的方式禁用该配置项，如：
 
-    client-output-buffer-limit normal 0 0 0 
-    client-output-buffer-limit slave 256mb 64mb 60 
-    client-output-buffer-limit pubsub 32mb 8mb 60 
+    client-output-buffer-limit normal 0 0 0
+    client-output-buffer-limit slave 256mb 64mb 60
+    client-output-buffer-limit pubsub 32mb 8mb 60
 
 ### **应用场景** ###
 
@@ -51,7 +51,7 @@ redis server通过addReply把数据发送给客户端:
 
     void addReply(redisClient *c, robj *obj) {
         if (prepareClientToWrite(c) != REDIS_OK) return;
-    
+
         if (obj->encoding == REDIS_ENCODING_RAW) {
             if (_addReplyToBuffer(c,obj->ptr,sdslen(obj->ptr)) != REDIS_OK)
                 _addReplyObjectToList(c,obj);
@@ -62,7 +62,7 @@ redis server通过addReply把数据发送给客户端:
             if (listLength(c->reply) == 0 && (sizeof(c->buf) - c->bufpos) >= 32) {
                 char buf[32];
                 int len;
-    
+
                 len = ll2string(buf,sizeof(buf),(long)obj->ptr);
                 if (_addReplyToBuffer(c,buf,len) == REDIS_OK)
                     return;
@@ -105,9 +105,9 @@ redis server通过addReply把数据发送给客户端:
 或者是个处于REDIS\_REPL\_ONLINE状态的slave但为其且安装写回掉函数失败时，则不应该将数据
 写入客户端output buffer。 我们知道，在master保存和发送rdb文件期间，slave的状态是:
 
-    #define REDIS_REPL_WAIT_BGSAVE_START 6    
-    #define REDIS_REPL_WAIT_BGSAVE_END 7      
-    #define REDIS_REPL_SEND_BULK 8            
+    #define REDIS_REPL_WAIT_BGSAVE_START 6
+    #define REDIS_REPL_WAIT_BGSAVE_END 7
+    #define REDIS_REPL_SEND_BULK 8
 
 中的一种，所以这期间的写请求都会保存到slave的output buffer；但由于并没有安装写回调函数，
 数据并不会发到slave；直到master把rdb文件完全发送给slave，master通过sendBulkToSlave中的
@@ -120,7 +120,7 @@ redis server通过addReply把数据发送给客户端:
           aeDeleteFileEvent(server.el,slave->fd,AE_WRITABLE);
           putSlaveOnline(slave);
       }
-    
+
     // 将slave的状态改为REDIS_REPL_ONLINE, repl_put_online_on_ack置为0，
     // 并且安装写回调函数
     void putSlaveOnline(redisClient *slave) {

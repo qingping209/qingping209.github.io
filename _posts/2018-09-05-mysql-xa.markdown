@@ -3,7 +3,7 @@ layout: post
 title: "一种mysql xa做法"
 date: 2018-08-26
 categories: mysql
-tags:架构
+tags: 架构
 ---
 
 ### 流程：

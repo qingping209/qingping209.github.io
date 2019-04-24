@@ -3,7 +3,7 @@ layout: post
 title:  "rocksdb数据异常增长"
 date:   2018-03-07 10:38
 categories: rocksdb
-tags:坑
+tags: 坑
 ---
 
 现网有个应用侧的实例，在写入量并不是很大的情况下，以每天100G的速度不断增大，很是诡异。 于是分析了下该实例的数据访问模式如下:

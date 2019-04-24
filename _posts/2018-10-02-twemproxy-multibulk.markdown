@@ -2,8 +2,8 @@
 layout: post
 title:  "twemproxy支持任意multibulk的回包"
 date:   2018-10-02 15:00:10
-categories: twemproxy 
-tags:源码
+categories: twemproxy
+tags: 源码
 ---
 
 我们知道twemproxy回后端回包的解析支持不够全面的, 很大原因是当初在开发的时候，redis命令返回的结果是足够简单的，只有简单的字符串，数字，错误，以及对hscan/scan/zscan的支持(简单的两元素multibulk: 一个integer + 一个simlebulk)。后来，感觉twemproxy的维护不是那么活跃了，以至于后来redis增加了一些新的命令, twemproxy是支持不了的。
