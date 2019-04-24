@@ -4,6 +4,7 @@ title: "redis pipeline"
 date: 2017-02-19
 categories: redis
 tags: 原理
+---
 
 redis有种客户端交互模式，叫做pipeline模式， 可以大幅度提高系统的吞吐量， 官方文档在这里,  https://redis.io/topics/pipelining，
 
@@ -23,6 +24,6 @@ twemproxy不能完整支持pipeline。 由于twemproxy到一个后端redis-serve
 小结一下:  ***twemproxy可以保证客户端收到回复的顺序和其发请求的顺序是一致的，但是在twemproxy到后端redis-server配置多个连接时，发到同一个redis-server的请求的执行顺序是不确定的。***
 
 ### Ref ###
-- https://github.com/twitter/twemproxy/issues/193 
-- https://github.com/twitter/twemproxy/blob/master/notes/recommendation.md#server_connections--1 
+- https://github.com/twitter/twemproxy/issues/193
+- https://github.com/twitter/twemproxy/blob/master/notes/recommendation.md#server_connections--1
 
