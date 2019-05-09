@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "KeyDB简介"
+title: "KeyDB"
 date: 2019-04-25
 categories: redis
 tags: 源码
