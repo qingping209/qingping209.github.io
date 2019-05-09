@@ -1,0 +1,36 @@
+---
+layout: post
+title: "KeyDB简介"
+date: 2019-04-25
+categories: redis
+tags: 源码
+typora-root-url: ../images
+---
+
+[KeyDB](<https://github.com/JohnSully/KeyDB>)是Redis的一个分支,  主要特点是多线程： KeyDB, A Multithreaded Fork of Redis.  为什么要多线程呢， 这里有精彩的讨论可以参考： [KeyDB: A Multithreaded Redis Fork](https://news.ycombinator.com/item?id=19368955)， 还有这里 [An update about Redis developments in 2019](http://antirez.com/news/126)  至于到底是单线程好还是多线程好，这里不做评论，根据自己的需求进行选择。
+
+换个问题，我们如何提升Redis单实例的性能呢？ 我们通过perf可以发现， Redis很大一部分性能消耗在收发包上，看火焰图:
+
+![perf-redis](/images/perf-redis.svg)
+
+从火焰图里面可以看到， sys_read, sys_write, readQueryFromClient, writeToClient占了不小的比例，因此可以考虑利用更多的计算资源来做这些事情，即使用多个线程来进行收包，发包，协议解析，非常自然的想法。 那么问题来了，既然是提升Redis的性能，那么所有的改进只能是性能的提升，其它的功能必须和Redis全部兼容，因此，多线程的引入不能对Redis本身的架构有太大的侵入，否则不断会引入线程同步相关的bug,  后续和upstream的跟进也会变得非常困难。看下KeyDB是什么做的？
+
+KeyDB架构不算复杂:  开启多个线程，每个线程运行一个event loop, 在每个event loop中都创建一个监听同一个端口的socket,  调用accept.  多线程中accept会涉及到惊群问题[1] (惊群问题的解决又可以开个段子了)，KeyDB利用Linux Kernel 3.9 中引入的一个特性SO_REUSEPORT来解决此问题[2]。于是，当新来一个客户端连接，一个线程t被唤醒，调用accept,  返回一个socket, 创建一个client, 后续该client上数据收发，命令执行都由线程t来执行。在accept完成以后，每个运行event loop的线程，都可以看做是一个redis实例，唯一的问题在于，这些线程需要操作的内存数据结构是同一个大的dict, 需要进行线程同步。 KeyDB使用spinlock来解决并发访问核心数据结构的线程同步问题。为何使用spinlock, 因为访问核心数据结构非常快， spin的开销小于线程切换的开销。
+
+整个架构简洁明了，对Redis本身的架构并没有大的侵入和破坏，很容易和upstream sync,  引发多线程bug的概率也大大降低了。 了解完大概架构以后， 我尝试benchmark了一把:
+
+`./memtier_benchmark -p 6379 -a foobar --key-maximum 1000000000 -d 128 --key-pattern=P:P --ratio=1:0  -n 10000 --json-out-file=key.json  --threads=12 -c 250`
+
+有意思的是，一开始死活都无法重现2.5 倍Redis的性能，后来跟作者讨论了一番，才得到了2倍左右的Redis性能，如[这里所说](https://medium.com/@john_63123/redis-should-be-multi-threaded-e28319cab744?sk=7ce8e9fe3ec8224a4d27ef075d085457):
+
+- memtier和KeyDB需要运行在不同的server上
+- memtier需要跑8个线程，需要8个以上的cpu
+- KeyDB跑4个线程，需要4个cpu至少
+- KeyDB所在的机器需要设置网卡多队列
+
+以上条件缺一不可。 当然，如果有16核的server，可以把memtier和KeyDB放在同一个server上跑，可得到3倍以上Redis性能。
+
+### References:
+
+1. <https://en.wikipedia.org/wiki/Thundering_herd_problem>
+2. <https://lwn.net/Articles/542629/>
