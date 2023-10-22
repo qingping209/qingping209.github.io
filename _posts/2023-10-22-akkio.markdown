@@ -1,0 +1,81 @@
+---
+layout: post
+title:  "akkio"
+date:   2023-08-01 00:30:10
+categories: 分布式
+tags: 论文
+---
+
+# akkio解决什么问题
+
+akka是一个 locality management service。
+
+为什么需要一个 locality management service, 为了降低访问延时。 那么为什么一定要使用 locality management service 呢？  先看下有哪些选项。 
+
+# 备选方案
+
+
+当业务规模大的时候，数据存储成本和跨 data center 之间的带宽成本会很高，那么把数据复制到所有的data center 在经济上和运营上就不可行。 并且请求来源地是会发生变化的，所以并不能通过扩容某些负载高的数据中心来解决问题。 另外数据的读写比例低，意味着更新带来的跨数据中心的通信会非常庞大； 用分布式缓存的话，需要命中率非常高才行，但是让缓存命中高需要的硬件资源开销非常庞大，另外低读写比在缓存失效的时候会带来庞大的跨数据中心通信；进一步说，缓存是最终一致的，有些服务需要强一致。 搬迁 workload 其实也不太可行。一般 workload 的搬迁是通过流量控制的方式，这样一来会增加 dc之间的流量，占用较多的带宽;  负载是会变化的，迁移的目标 dc 可能负载就很高，或者在某些时间段会变得很高。
+
+# 关键概念
+
+## 数据迁移的粒度  ushard
+
+### 为什么需要 ushard
+
+第一个问题，既然要做数据迁移， 那么迁移的力度是什么？  一般而言，分布式data store 都有shard 的概念， 无论是按照哈希sharding 还是范围 sharding.  shard 是复制，负载均衡，故障恢复的基本单元。一般 data store 的 shard的大小通常是几十 GB，每个 shard 只属于一个 data node; 每个 data node 会存储若干个 shard。决定 shard 大小主要有两个因素: 1) 元数据的量级 2) 负载均衡和故障恢复的效率。
+
+使用 data store 的 shard 作为搬迁粒度，也不是不行，很多系统也这么做。但是问题在于， 一个 data store shard 的数据量通常太大，包含了很多working set 之外的数据。这样一来，就浪费了 dc 之间的带宽。 facebook 通常的 working set 小于，搬迁整个 data store shard 是非常不经济的。
+### ushard 的生成和使用
+
+ushard由应用生成。 1）生成一个全局的 ushard-id 2) 制定一个将 key 划分成 ushard 的 方式。 例如，给定一个 key, 能知道这个 key 对应的 ushard-id 是什么。 
+#### 使用ushard对 data store 的要求
+- data store 需要保证 ushard 不跨 data store shard
+- data store 需要保证在迁移 ushard 的时候能保持数据的强一致性
+#### 使用 ushard 对application的要求
+- application 需要自己能把数据切分成多个 u-shard
+- 客户端需要维护 ushard 创立的 scheme, 也就是给定一个 key,  这个 key 对应的 ushard-id 是什么； 客户端需要能生成全局唯一的 ushard id;
+- 对于不是原生支持 ushard 的 data store, 应用层在访问data store 的时候，需要带上 ushard id;
+#### ushard 如何映射到 datastore 的 shard
+先起 replica set； 再创建 shard; 再把 shard 按照 replication configuration 的要求assign 到 data store servers。  创建了 ushard 以后，先按照一个默认规则，把 ushard 放到某个 data store 的某个 shard.  后续如果有必要，对 ushard 进行搬迁。
+
+## replication
+
+### replication configuration
+
+对于每个 shard,  应该有几个副本，每个副本在哪个dc,  集群或者 rack。 replica configuration根据业务的需求进行定制，满足业务在availability, consistency, resource-effectiveness, and performance方面实现最佳平衡。
+### replica set collection
+
+拥有相同replica configuration 的replica set称为 replica set collection。每个 replica set collection 拥有一个唯一id ，叫做location handle。Akkio 所做的事情，就是把 ushard 在不同的 replica set collection 之间进行迁移。
+#### replica set collection 的创建
+
+业务给定需求，如:  expected data size, expected access rate (i.e., QPS), R/W-ratios, replication factor, availability require- ments, consistency requirements,  constraints等， 计算出一个在avail- ability, consistency, resource-effectiveness, and perfor- mance之间形成最佳 trade off 的replica set collection。 同时为这个 replica set collection 生成 shards， 例如有 replica set collection 中包含 100 组 replica set; 为每组 replica set 生成10000个 shard。shards 生成以后，datastore 的 shard manager 将这些 shard assign 给满足指定要求的 data store server 上。 哪个 shard 放到了那个 data store server 通过一个 directory service 来管理。 shard manager 还负责负载均衡和故障检查。
+
+## 搬迁决策依据
+
+搬迁决策解决一个 ushard 应该放在哪个data store shard 的问题。 需要三个组件:
+- Akkio Location Service
+- Access Counter Service
+- Data Placement Service
+
+### Akkio Location Service
+
+akkio location service 提供了通过 ushard-id返回 location handle 的服务。 location handle可以让 data store 的 client 访问到存储了对应数据的 data store server。 
+
+前文中说到 location handle 是一个 replica set collection的 id。而 replica set collection 是replication configuration 相同的一组的 replica。 按照这个表达的话，那么 replica set collection 大概率就是一组 data store server中的 primary 节点。这组 data store server 上 host 了多个data store shard。
+
+data store 的 shard 划分方式一般而言是固定的。例如某个业务 key 只能属于某一个 data store shard,  而一个 data store shard 只能在一个data store server 上。 涉及到搬迁的时候，如果一个 ushard 从一个 data store server A 搬迁到另外一个data store server  B,  且Server A 和Server B 属于同一个 data store 集群，那么 ushard 所属的 data store shard 就改变了。改变了似乎也不是一个问题，只要能知道 ushard-id 对应的 data store server 就行了。 那么问题是什么呢？  如果 data store 集群将 shard 从一个 data store server A 迁移到另外一个 data store server B 上，那么需要保证：
+- 没有 跨 shard 的 ushard 的存在
+- 搬迁完以后，这个 shard 里面所有的 ushard 的对应 location handle需要更新, data store 需要感知 akkio 的存在
+或者, data store 不做数据的 rebalance,  完全依赖 ushard 的搬迁。文中是采用通过 DPS搬迁 ushard 的方式来实现。 上文描述的data store的 shard 的迁移是Replica set collection changes的一种场景。
+
+location 信息在每个dc 都存一份，存放在 [[zippydb]] 中，同时使用分布式缓存。缓存失效的时候，去[[zippydb]]中访问。存储开销在百 GB级别，成本可控。
+
+### Access Counter Service
+
+ACS 记录每个 ushard 来自哪个 dc 的请求访问，以及访问的频率。访问模式相同的服务可以使用相同的 Counter 记录。
+### Data Placement Service
+
+决定 ushard 放在哪里，并且负责 ushard 的创建和迁移。 把 ushard 的创建和迁移放到 DPS 层而不是放到客户端层，是为了收口，防止并发问题。 ushard 的迁移的实现方式取决于底层的 data store 是否支持 ACL，这个就不赘述了。 例如zippydb 的迁移和 rocksandra 的实现方式就不同。
+
+replica set collection 发生变化，也涉及到迁移。也是基于 ushard 的迁移。 新增和删除的处理方式略微不同。
